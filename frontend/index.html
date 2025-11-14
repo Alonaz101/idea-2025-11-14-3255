@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mood-Based Recipe Recommendation</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: auto; padding: 20px; }
+        label, select, button { font-size: 1.2em; margin: 10px 0; }
+        ul { list-style: none; padding: 0; }
+        li { margin: 10px 0; }
+        .favorite { color: red; cursor: pointer; margin-left: 10px; }
+    </style>
+</head>
+<body>
+<h1>Mood-Based Recipe Recommendation</h1>
+<label for="mood-select">Select your mood:</label>
+<select id="mood-select">
+    <option value="happy">Happy</option>
+    <option value="sad">Sad</option>
+    <option value="relaxed">Relaxed</option>
+    <option value="angry">Angry</option>
+</select>
+<button id="get-recipes">Get Recipes</button>
+<h2>Recommended Recipes</h2>
+<ul id="recipe-list"></ul>
+
+<script>
+const userId = 'user123'; // Mock user id for demo
+
+async function getFavorites() {
+    const res = await fetch(`/api/users/${userId}/favorites`);
+    if(res.ok) return await res.json();
+    return [];
+}
+
+async function toggleFavorite(recipeId) {
+    await fetch(`/api/users/${userId}/favorites`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({recipe_id: recipeId})
+    });
+    await displayFavorites();
+}
+
+async function displayFavorites() {
+    const favs = await getFavorites();
+    const favIds = new Set(favs.map(r => r.id));
+    const lis = document.querySelectorAll('#recipe-list li');
+    lis.forEach(li => {
+        const rid = parseInt(li.getAttribute('data-id'));
+        const star = li.querySelector('.favorite');
+        star.textContent = favIds.has(rid) ? '★' : '☆';
+    });
+}
+
+async function getRecipes() {
+    const mood = document.getElementById('mood-select').value;
+    const res = await fetch('/api/recommend', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ mood })
+    });
+    const recipes = await res.json();
+    const list = document.getElementById('recipe-list');
+    list.innerHTML = '';
+    recipes.forEach(r => {
+        const li = document.createElement('li');
+        li.setAttribute('data-id', r.id);
+        li.textContent = r.name;
+        const favSpan = document.createElement('span');
+        favSpan.classList.add('favorite');
+        favSpan.textContent = '☆';
+        favSpan.onclick = () => toggleFavorite(r.id);
+        li.appendChild(favSpan);
+        list.appendChild(li);
+    });
+    await displayFavorites();
+}
+
+document.getElementById('get-recipes').addEventListener('click', getRecipes);
+</script>
+</body>
+</html>
